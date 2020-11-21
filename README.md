@@ -1,0 +1,2 @@
+# spaligner
+Spliced aligner.
