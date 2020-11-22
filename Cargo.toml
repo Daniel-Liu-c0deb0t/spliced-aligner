@@ -8,6 +8,7 @@ edition = "2018"
 debruijn = "0.3.2"
 serde = "^1"
 serde_derive = "^1"
+bio = "0.32.0"
 
 [dependencies.hashbrown]
 version = "0.9"
