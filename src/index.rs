@@ -97,12 +97,10 @@ mod tests {
     use bio::io::fasta;
     use debruijn::kmer::*;
 
-    const CHR1_PATH: &'static str = "../dna/Homo_sapiens.GRCh38.dna.chromosome.1.fa";
-
     #[test]
     fn test_chr1() {
-        test_chr_index::<Kmer32, Kmer12>(CHR1_PATH, 32);
-        test_chr_index::<Kmer40, Kmer16>(CHR1_PATH, 40);
+        test_chr_index::<Kmer32, Kmer12>(crate::tests::CHR1_PATH);
+        test_chr_index::<Kmer40, Kmer16>(crate::tests::CHR1_PATH);
     }
 
     fn test_chr_index<K: Kmer, P: Kmer>(path: &str) {

@@ -11,9 +11,10 @@ use super::index::Index;
 // splice junctions
 
 /// Returns an optional (start, length) tuple for the longest mappable location.
-pub fn max_map_prefix<K: Kmer, P: Kmer>(query: DnaStringSlice, index: &Index<K, P>) -> Option<(usize, usize)> {
+pub fn max_map_prefix<K: Kmer, P: Kmer>(index: &Index<K, P>, query: DnaStringSlice) -> Option<(usize, usize)> {
     let kmer = query.get_kmer::<K>(0);
     let minimizer: P = minimizer(&query.slice(0, K::k()));
+    let query_end = query.slice(K::k(), query.len());
     let intervals = index.get(minimizer)?;
     let reference = index.reference();
     let mut max_pos = None;
@@ -30,7 +31,8 @@ pub fn max_map_prefix<K: Kmer, P: Kmer>(query: DnaStringSlice, index: &Index<K, 
 
             if interval_kmer == kmer {
                 // if kmer match, then try extend
-                let len = K::k() + lcp(&reference.slice(start + K::k(), reference.len()), &query);
+                let lcp = lcp(&reference.slice(start + K::k(), reference.len()), &query_end);
+                let len = K::k() + lcp;
 
                 if len > max_len {
                     max_len = len;
@@ -83,4 +85,45 @@ fn lcp<V1: Vmer, V2: Vmer>(a: &V1, b: &V2) -> usize {
     }
 
     idx
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::index::*;
+    use bio::io::fasta;
+    use debruijn::kmer::*;
+    use debruijn::dna_string::*;
+
+    #[test]
+    fn test_chr1() {
+        test_chr_mmp::<Kmer32, Kmer12>(crate::tests::CHR1_PATH,
+                                       b"TTGCGAACACCAAGCTCAACAATGAGCCCTGGAAAATTTCTGGAATGGATTATTAAACAG",
+                                       Some((334 * 60, 60))); // fasta file line 336
+
+        test_chr_mmp::<Kmer32, Kmer12>(crate::tests::CHR1_PATH,
+                                       b"TTGCGAACACCAAGCTCAACAATGAGCCCTGGAAAATTTCTGGAATGGATCCCCCCCCCC",
+                                       Some((334 * 60, 50))); // mismatching tail
+    }
+
+    fn test_chr_mmp<K: Kmer, P: Kmer>(path: &str, query: &[u8], correct: Option<(usize, usize)>) {
+        let query = DnaString::from_acgt_bytes(query);
+        let reader = fasta::Reader::from_file(path).unwrap();
+
+        for record in reader.records() {
+            let record = record.unwrap();
+
+            let index: Index<K, P> = Index::new(record.seq());
+
+            println!("Index building done!");
+
+            let query_slice = query.slice(0, query.len());
+            let res = max_map_prefix::<K, P>(&index, query_slice);
+
+            println!("Query: {:?}", query);
+            println!("MMP location: {:?}", res);
+
+            assert_eq!(correct, res);
+        }
+    }
 }
