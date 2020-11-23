@@ -1,4 +1,4 @@
-# spaligner
+# spliced-aligner
 Spliced aligner.
 
 Everything is still work-in-progress...
