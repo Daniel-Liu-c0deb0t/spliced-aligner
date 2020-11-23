@@ -7,20 +7,21 @@ use debruijn::Kmer;
 use debruijn::msp::Scanner;
 
 use std::cmp;
+use std::marker::PhantomData;
 
 #[derive(Serialize, Deserialize)]
-pub struct Index<P: Kmer> {
+pub struct Index<K: Kmer, P: Kmer> {
     reference: DnaString,
     map: HashMap<P, Vec<Interval>>,
-    k: usize,
+    phantom: PhantomData<K>,
 }
 
-impl<P: Kmer> Index<P> {
-    pub fn new(reference: &[u8], k: usize) -> Self {
+impl<K: Kmer, P: Kmer> Index<K, P> {
+    pub fn new(reference: &[u8]) -> Self {
         let reference = DnaString::from_acgt_bytes(reference);
         let score_func = |pi: &P| pi.to_u64() as usize;
 
-        let scanner = Scanner::new(&reference, score_func, k);
+        let scanner = Scanner::new(&reference, score_func, K::k());
         let intervals = scanner.scan(); // TODO: add to hash map while scanning to avoid extra allocations
         let mut map = HashMap::with_capacity(1 << 16);
 
@@ -31,7 +32,7 @@ impl<P: Kmer> Index<P> {
             bucket.push(Interval::new(i.start, i.len));
         }
 
-        Self { reference, map, k }
+        Self { reference, map, phantom: PhantomData }
     }
 
     pub fn reference<'a>(&'a self) -> &'a DnaString {
@@ -44,10 +45,6 @@ impl<P: Kmer> Index<P> {
 
     pub fn len(&self) -> usize {
         self.map.len()
-    }
-
-    pub fn k(&self) -> usize {
-        self.k
     }
 
     /// Min, max, and avg len of vectors, and min, max, and avg len of all intervals.
@@ -104,18 +101,18 @@ mod tests {
 
     #[test]
     fn test_chr1() {
-        test_chr_index::<Kmer12>(CHR1_PATH, 32);
-        test_chr_index::<Kmer16>(CHR1_PATH, 40);
+        test_chr_index::<Kmer32, Kmer12>(CHR1_PATH, 32);
+        test_chr_index::<Kmer40, Kmer16>(CHR1_PATH, 40);
     }
 
-    fn test_chr_index<P: Kmer>(path: &str, k: usize) {
+    fn test_chr_index<K: Kmer, P: Kmer>(path: &str) {
         let reader = fasta::Reader::from_file(path).unwrap();
         let mut num_records = 0usize;
 
         for record in reader.records() {
             let record = record.unwrap();
 
-            let index: Index<P> = Index::new(record.seq(), k);
+            let index: Index<K, P> = Index::new(record.seq());
             let len = index.len();
             let stats = index.stats();
 
