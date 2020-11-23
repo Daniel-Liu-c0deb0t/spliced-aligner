@@ -39,8 +39,8 @@ impl<K: Kmer, P: Kmer> Index<K, P> {
         &self.reference
     }
 
-    pub fn get<'a>(&'a self, p: &P) -> Option<&'a Vec<Interval>> {
-        self.map.get(p)
+    pub fn get<'a>(&'a self, p: P) -> Option<&'a Vec<Interval>> {
+        self.map.get(&p)
     }
 
     pub fn len(&self) -> usize {
@@ -50,10 +50,10 @@ impl<K: Kmer, P: Kmer> Index<K, P> {
     /// Min, max, and avg len of vectors, and min, max, and avg len of all intervals.
     pub fn stats(&self) -> (usize, usize, f64, usize, usize, f64) {
         let mut min = usize::MAX;
-        let mut max = usize::MIN;
+        let mut max = 0usize;
         let mut sum = 0usize;
         let mut interval_sum_min = usize::MAX;
-        let mut interval_sum_max = usize::MIN;
+        let mut interval_sum_max = 0usize;
         let mut interval_sum_sum = 0usize;
 
         for v in self.map.values() {
@@ -82,7 +82,7 @@ impl<K: Kmer, P: Kmer> Index<K, P> {
 #[derive(Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Interval {
     pub start: u32,
-    pub len: u16 // TODO: may be able to use u8 as len?
+    pub len: u16, // TODO: may be able to use u8 as len?
 }
 
 impl Interval {
